@@ -24,7 +24,8 @@ module.exports = function (app) {
 	});
 
   function getCode(req, res) {
-    var url = 'https://api.instagram.com/oauth/authorize/?client_id=2d3a4166301e4d6997f7c56683c68963&redirect_uri=http://localhost:9778/instagram/confirm&response_type=code';
+    var url = 'https://api.instagram.com/oauth/authorize/?client_id=2d3a4166301e4d6997f7c56683c68963&redirect_uri=http://'+
+          req.hostname+':9778/instagram/confirm&response_type=code';
     res.redirect(url);
   }
 
