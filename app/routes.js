@@ -2,12 +2,16 @@
   module.exports = function (app) {
 	var request = require('request');
 	var Q = require('q');
-	var path = require("path"),
-			dirName = __dirname.replace(path.basename(__dirname), "");
+	var path = require('path'),
+			dirName = __dirname.replace(path.basename(__dirname), '');
 	
 	app.get('/', function(req, res) {
 		res.sendFile(dirName + '/public/index.html');
 	});
+
+  app.get('/instagram/confirm', getToken);
+
+  app.get('/instagram', getCode);
 	
 	app.get('/instagram/recentByTag', function(req, res) {
 
@@ -19,7 +23,7 @@
 
   function getCode(req, res) {
     var url = 'https://api.instagram.com/oauth/authorize/?client_id=2d3a4166301e4d6997f7c56683c68963&redirect_uri=http://localhost:9778/instagram/confirm&response_type=code';
-    doHttp(req, res, url);
+    res.redirect(url);
   }
 
   function getToken(req, res) {
@@ -27,7 +31,7 @@
                     'client_secret':'2ef572cafb2d482f86b144242cb2bf5c',
                     'grant_type':'authorization_code',
                     'redirect_uri':'http://localhost:9778/instagram/confirm',
-                    'code':'a728cfc551c94203bc36ae4e8a01c453'};
+                    'code':req.query.code};
     var url = 'https://api.instagram.com/oauth/access_token';
 
     var method = 'POST';
