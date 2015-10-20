@@ -1,5 +1,5 @@
-  'use strict';
-  module.exports = function (app) {
+'use strict';
+module.exports = function (app) {
 	var request = require('request');
 	var Q = require('q');
 	var path = require('path'),
@@ -19,10 +19,9 @@
 
     console.log('calling recentTag');
     if(token === undefined )
-      doHttp(null, null, 'http://localhost:9778/instagram');
+      getCode(req, res)//.then(function(){console.log('Got it!');});
    // getCode(req, res);
-
-	  });
+	});
 
   function getCode(req, res) {
     var url = 'https://api.instagram.com/oauth/authorize/?client_id=2d3a4166301e4d6997f7c56683c68963&redirect_uri=http://localhost:9778/instagram/confirm&response_type=code';
@@ -39,10 +38,10 @@
 
     var method = 'POST';
 
-    doHttp(req, res, url, method, formData);
+    return doHttp(req, res, url, method, formData)//.then(function(){console.log('Got token!');});
   }
 
-	 function doHttp(req, res, url, method, formData) {
+	function doHttp(req, res, url, method, formData) {
 	  var deferred = Q.defer();
 	  if(method==null) method = 'GET';
 	  var options = {
@@ -53,7 +52,7 @@
 	    //   'Accept': 'application/json'
 	    // }
 	  };
-console.log(options.url);
+    console.log(options.url);
 	  request(options, function(err, res, body) {
 	   // console.log(err, res, body);
 	    if (err) {
@@ -61,14 +60,20 @@ console.log(options.url);
 	      console.log(err);
 	      return;
 	    }
-//       console.log(body);
-       token = JSON.parse(body).access_token;
+       // console.log(body);
+      try {
+        token = JSON.parse(body).access_token;
+      } catch(e) {
+        console.log(e);
+        deferred.reject(err);
+        return;
+      }
        console.log('token='+token);
-	    deferred.resolve(body);
-	  }) ;
-	  var results = deferred.promise;
-	//  console.log(results);
-	 // res.send(results);
-    return deferred.promise;
-	}
+       deferred.resolve(body);
+    });
+//    var results = deferred.promise;
+  //  console.log(results);
+   // res.send(results);
+    return deferred.promise;   
+	}	 
 }
