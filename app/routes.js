@@ -9,6 +9,8 @@
 		res.sendFile(dirName + '/public/index.html');
 	});
 
+  var token = undefined;
+
   app.get('/instagram/confirm', getToken);
 
   app.get('/instagram', getCode);
@@ -16,8 +18,9 @@
 	app.get('/instagram/recentByTag', function(req, res) {
 
     console.log('calling recentTag');
-
-    getCode(req, res)//.then(getToken(req, res);
+    if(token === undefined )
+      doHttp(null, null, 'http://localhost:9778/instagram');
+   // getCode(req, res);
 
 	  });
 
@@ -27,11 +30,11 @@
   }
 
   function getToken(req, res) {
-        var formData = {'client_id':'2d3a4166301e4d6997f7c56683c68963',
-                    'client_secret':'2ef572cafb2d482f86b144242cb2bf5c',
-                    'grant_type':'authorization_code',
-                    'redirect_uri':'http://localhost:9778/instagram/confirm',
-                    'code':req.query.code};
+    var formData = {'client_id':'2d3a4166301e4d6997f7c56683c68963',
+                'client_secret':'2ef572cafb2d482f86b144242cb2bf5c',
+                'grant_type':'authorization_code',
+                'redirect_uri':'http://localhost:9778/instagram/confirm',
+                'code':req.query.code};
     var url = 'https://api.instagram.com/oauth/access_token';
 
     var method = 'POST';
@@ -41,9 +44,7 @@
 
 	 function doHttp(req, res, url, method, formData) {
 	  var deferred = Q.defer();
-	 // console.log(decodeURIComponent(url));
-//console.log(req.query);
-	if(method==null) method = 'GET';
+	  if(method==null) method = 'GET';
 	  var options = {
       method: method,
       formData: formData,
@@ -60,12 +61,14 @@ console.log(options.url);
 	      console.log(err);
 	      return;
 	    }
-       console.log(body);
+//       console.log(body);
+       token = JSON.parse(body).access_token;
+       console.log('token='+token);
 	    deferred.resolve(body);
 	  }) ;
 	  var results = deferred.promise;
-//	  console.log(results);
-	  res.send(results);
+	//  console.log(results);
+	 // res.send(results);
     return deferred.promise;
 	}
 }
