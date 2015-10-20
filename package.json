@@ -1,0 +1,22 @@
+{
+  "name": "BEAN-Stack-App",
+  "version": "0.0.0",
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-contrib-sass": "^0.8.1",
+    "grunt-contrib-uglify": "^0.6.0",
+    "grunt-contrib-watch": "^0.6.1",
+    "grunt-develop": "^0.4.0",
+    "grunt-exec": "^0.4.6",
+    "time-grunt": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "dependencies": {
+    "express": "^4.9.4",
+    "q": "^1.4.0",
+    "request": "^2.55.0",
+    "simpler-config": "^0.0.4"
+  }
+}
