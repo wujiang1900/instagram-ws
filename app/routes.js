@@ -29,18 +29,23 @@ module.exports = function (app, port) {
     console.log('calling recentTag');
     // var deferred = Q.defer();
     if (token === undefined ) {   
-      getCode(req, res);
+      getCode(req, res, 'recentByTag');
     }
 	});
 
-  function getCode(req, res) {
-    var redirect_uri = 'http://'+req.hostname+':'+port+config.redirect_uri;
+  function getCode(req, res, action) {
+    var redirect_uri = 'http://'+req.hostname+':'+port+config.redirect_uri + '?action='+action;
     var url = authorize_url + '?client_id=' + client_id + '&redirect_uri='+ redirect_uri + '&response_type=' + response_type;
     res.redirect(url);
   }
 
   function getToken(req, res) {
-    var redirect_uri = 'http://'+req.hostname+':'+port+config.redirect_uri;
+
+    //todo:  handle errors (see  https://instagram.com/developer/authentication/)
+
+    var action = req.query.action;
+    var redirect_uri = 'http://'+req.hostname+':'+port+config.redirect_uri + '?action='+action;
+
     var formData = {
         'client_id'     : client_id,
         'client_secret' : client_secret,
@@ -48,6 +53,7 @@ module.exports = function (app, port) {
         'redirect_uri'  : redirect_uri,
         'code'          : req.query.code
     };
+    console.log('action='+action);
     var method = 'POST';
 
     doHttp(req, res, access_token_url, method, formData).then(function(){
@@ -74,7 +80,7 @@ module.exports = function (app, port) {
 	      console.log(err);
 	      return;
 	    }
-       // console.log(body);
+     //   console.log(body);
       try {
         token = JSON.parse(body).access_token;
       } catch(e) {
