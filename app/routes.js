@@ -31,6 +31,8 @@ module.exports = function (app, port) {
     if (token === undefined ) {   
       getCode(req, res, 'recentByTag');
     }
+    else
+      res.send(token);
 	});
 
   function getCode(req, res, action) {
