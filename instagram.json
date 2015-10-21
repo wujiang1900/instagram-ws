@@ -1,0 +1,9 @@
+{
+	"client_id" 		:	"2d3a4166301e4d6997f7c56683c68963",
+	"client_secret" 	: 	"2ef572cafb2d482f86b144242cb2bf5c",
+	"redirect_uri"		: 	"/instagram/confirm",
+	"grant_type"		:	"authorization_code",
+	"response_type" 	: 	"code",
+	"authorize_url"		:	"https://api.instagram.com/oauth/authorize/",
+	"access_token_url"	:	"https://api.instagram.com/oauth/access_token"
+}

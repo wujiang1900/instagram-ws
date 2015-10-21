@@ -1,9 +1,19 @@
 'use strict';
-module.exports = function (app) {
-	var request = require('request');
-	var Q = require('q');
-	var path = require('path'),
-			dirName = __dirname.replace(path.basename(__dirname), '');
+module.exports = function (app, port) {
+
+  var request = require('request');
+  var Q       = require('q');
+  var path    = require('path'),
+    dirName   = __dirname.replace(path.basename(__dirname), '');
+
+  var config  = require('simpler-config').load(require(dirName + '/instagram.json'));
+
+  var client_id        = config.client_id;
+  var client_secret    = config.client_secret;
+  var grant_type       = config.grant_type;
+  var response_type    = config.response_type;
+  var authorize_url    = config.authorize_url;
+  var access_token_url = config.access_token_url;
 	
 	app.get('/', function(req, res) {
 		res.sendFile(dirName + '/public/index.html');
@@ -16,7 +26,6 @@ module.exports = function (app) {
   app.get('/instagram', getCode);
 	
 	app.get('/instagram/recentByTag', function(req, res) {
-
     console.log('calling recentTag');
     if(token === undefined )
       getCode(req, res)//.then(function(){console.log('Got it!');});
@@ -24,22 +33,23 @@ module.exports = function (app) {
 	});
 
   function getCode(req, res) {
-    var url = 'https://api.instagram.com/oauth/authorize/?client_id=2d3a4166301e4d6997f7c56683c68963&redirect_uri=http://'+
-          req.hostname+':9778/instagram/confirm&response_type=code';
+    var redirect_uri = 'http://'+req.hostname+':'+port+config.redirect_uri;
+    var url = authorize_url + '?client_id=' + client_id + '&redirect_uri='+ redirect_uri + '&response_type=' + response_type;
     res.redirect(url);
   }
 
   function getToken(req, res) {
-    var formData = {'client_id':'2d3a4166301e4d6997f7c56683c68963',
-                'client_secret':'2ef572cafb2d482f86b144242cb2bf5c',
-                'grant_type':'authorization_code',
-                'redirect_uri':'http://localhost:9778/instagram/confirm',
-                'code':req.query.code};
-    var url = 'https://api.instagram.com/oauth/access_token';
-
+    var redirect_uri = 'http://'+req.hostname+':'+port+config.redirect_uri;
+    var formData = {
+        'client_id'     : client_id,
+        'client_secret' : client_secret,
+        'grant_type'    : grant_type,
+        'redirect_uri'  : redirect_uri,
+        'code'          : req.query.code
+    };
     var method = 'POST';
 
-    return doHttp(req, res, url, method, formData)//.then(function(){console.log('Got token!');});
+    return doHttp(req, res, access_token_url, method, formData)//.then(function(){console.log('Got token!');});
   }
 
 	function doHttp(req, res, url, method, formData) {
