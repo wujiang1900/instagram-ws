@@ -58,12 +58,12 @@ module.exports = function (app, port) {
     console.log('action='+action);
     var method = 'POST';
 
-    doHttp(req, res, access_token_url, method, formData).then(function(){
+    doHttp(access_token_url, method, formData).then(function(){
       res.send(token);
     });
   }
 
-	function doHttp(req, res, url, method, formData) {
+	function doHttp(url, method, formData) {
 	  var deferred = Q.defer();
 	  if(method==null) method = 'GET';
 	  var options = {
