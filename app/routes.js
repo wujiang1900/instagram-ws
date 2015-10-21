@@ -27,9 +27,10 @@ module.exports = function (app, port) {
 	
 	app.get('/instagram/recentByTag', function(req, res) {
     console.log('calling recentTag');
-    if(token === undefined )
-      getCode(req, res)//.then(function(){console.log('Got it!');});
-   // getCode(req, res);
+    // var deferred = Q.defer();
+    if (token === undefined ) {   
+      getCode(req, res);
+    }
 	});
 
   function getCode(req, res) {
@@ -49,7 +50,9 @@ module.exports = function (app, port) {
     };
     var method = 'POST';
 
-    return doHttp(req, res, access_token_url, method, formData)//.then(function(){console.log('Got token!');});
+    doHttp(req, res, access_token_url, method, formData).then(function(){
+      res.send(token);
+    });
   }
 
 	function doHttp(req, res, url, method, formData) {
