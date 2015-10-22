@@ -32,13 +32,26 @@ module.exports = function (app, port) {
     console.log('action=' + req.params.action);
     //console.log('calling '+path.basename(req.path));
 
+    var action = getAction(req, req.params.action);
     if (token === undefined ) {
-      var action = getAction(req, req.params.action);
       getCode(req, res, action);
     }
-    else
-      res.send(token); //todo: send results
+    else {
+      doAction(res, action);
+    }
 	});
+
+  function doAction(res, action) {
+    doHttp(getActionUrl(action))
+    .then(function(data){      
+            res.send(data);
+          })
+    .catch(function(e) {
+      //todo: error page
+        console.log(e);
+      });    
+    // finally () ??
+  }
 
   /* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
   function getAction(req, action) {
@@ -54,7 +67,7 @@ module.exports = function (app, port) {
     var url = authorize_url + '?client_id=' + client_id 
                             + '&redirect_uri=' + getRedirectUri(req, action) 
                             + '&response_type=' + response_type;
-    console.log(url);
+    // console.log(url);
     res.redirect(url);
   }
 
@@ -73,23 +86,15 @@ module.exports = function (app, port) {
         'code'          : req.query.code
     };
 
-    var url = getActionUrl(action);
-    console.log('url='+url);
-    var method = 'POST';
-
-    doHttp(access_token_url, method, formData).then(function(){
-      // if(url.length===0) {
-      //   res.send(token);
-      // }
-      // else
-        return doHttp(url);
-    }).then(function(data){      
-      res.send(data);
-    }).catch( function(e) {
-      //todo: error page
-        console.log(e);
+    doHttp(access_token_url, 'POST', formData).then(function(){
+      if (action === undefined) {
+        res.send(token);
       }
-    ); // finally () ??
+      else { 
+        doAction(res, action);
+      }
+    });
+    // finally () ??
   }
 
   function getRedirectUri(req, action) {
@@ -100,13 +105,10 @@ module.exports = function (app, port) {
   }
 
   function getActionUrl(action) {
-     if (action === undefined) {
-        return '';
-     }
      var actions = action.split(ACTION__SEPARATOR);
      var url = config.actions[actions[0]]['url'];
      var params = actions[1].split(PARAM_SEPARATOR);
-   //  console.log(params);
+     // console.log(params);
      var paramStr = ''
      for(var i = 0; i<params.length; i++) {
         var param = params[i].split(VALUE_SEPARATOR);
@@ -122,6 +124,10 @@ module.exports = function (app, port) {
      return url + paramStr;
   }
 
+  /* call url 
+    and 
+  return a promise
+  */
 	function doHttp(url, method, formData) {
 	  var deferred = Q.defer();
 	  if(method==null) {
