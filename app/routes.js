@@ -1,5 +1,8 @@
 'use strict';
 module.exports = function (app, port) {
+  var ACTION__SEPARATOR = '::';
+  var PARAM_SEPARATOR = '||';  
+  var VALUE_SEPARATOR = '=='; 
 
   var request = require('request');
   var Q       = require('q');
@@ -25,19 +28,33 @@ module.exports = function (app, port) {
 
   app.get('/instagram', getCode);
 	
-	app.get('/instagram/recentByTag', function(req, res) {
-    console.log('calling recentTag');
-    // var deferred = Q.defer();
-    if (token === undefined ) {   
-      getCode(req, res, 'recentByTag');
+	app.get('/instagram/:action', function(req, res) {
+    console.log('calling ' + req.params.action);
+    //console.log('calling '+path.basename(req.path));
+
+    if (token === undefined ) {
+      var action = getAction(req, req.params.action);
+      getCode(req, res, action);
     }
     else
-      res.send(token);
+      res.send(token); //todo: send results
 	});
 
+  /* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
+  function getAction(req, action) {
+    var params = config.actions[action]['params'];
+    var paramStr = '';
+    for(var i = 0; i<params.length; i++) {
+      paramStr += params[i]+VALUE_SEPARATOR+req.query[params[i]]+PARAM_SEPARATOR;
+    }
+    return action + ACTION__SEPARATOR + paramStr;
+  }
+
   function getCode(req, res, action) {
-    var redirect_uri = 'http://'+req.hostname+':'+port+config.redirect_uri + '?action='+action;
-    var url = authorize_url + '?client_id=' + client_id + '&redirect_uri='+ redirect_uri + '&response_type=' + response_type;
+    var url = authorize_url + '?client_id=' + client_id 
+                            + '&redirect_uri=' + getRedirectUri(req, action) 
+                            + '&response_type=' + response_type;
+  //  console.log(url);
     res.redirect(url);
   }
 
@@ -46,7 +63,7 @@ module.exports = function (app, port) {
     //todo:  handle errors (see  https://instagram.com/developer/authentication/)
 
     var action = req.query.action;
-    var redirect_uri = 'http://'+req.hostname+':'+port+config.redirect_uri + '?action='+action;
+    var redirect_uri = getRedirectUri(req, action);
 
     var formData = {
         'client_id'     : client_id,
@@ -55,12 +72,46 @@ module.exports = function (app, port) {
         'redirect_uri'  : redirect_uri,
         'code'          : req.query.code
     };
-    console.log('action='+action);
+    console.log('url='+getActionUrl(action));
     var method = 'POST';
 
     doHttp(access_token_url, method, formData).then(function(){
-      res.send(token);
-    });
+      var url = getActionUrl(action);
+      return doHttp(url);
+    }).then(function(data){      
+      res.send(data);
+    }).catch( function(e) {
+      //todo: error page
+        console.log(e);
+      }
+    ); // finally () ??
+  }
+
+  function getRedirectUri(req, action) {
+    return 'http://'+ req.hostname + ':'
+                    + port 
+                    + config.redirect_uri 
+                    + '?action=' + action;
+  }
+
+  function getActionUrl(action) {
+     var actions = action.split(ACTION__SEPARATOR);
+     var url = config.actions[actions[0]]['url'];
+     var params = actions[1].split(PARAM_SEPARATOR);
+     console.log(params);
+     var paramStr = ''
+     for(var i = 0; i<params.length; i++) {
+        var param = params[i].split(VALUE_SEPARATOR);
+        var param_name = '{'+param[0]+'}';
+        if(url.indexOf(param_name)>-1) {
+          url = url.replace(param_name, param[1]);
+        }
+        else if(param[0].length>0) {
+          paramStr += '&'+param[0]+'='+param[1];
+        }
+     }
+     url = url.replace('{ACCESS-TOKEN}', token);
+     return url + paramStr;
   }
 
 	function doHttp(url, method, formData) {
@@ -69,14 +120,13 @@ module.exports = function (app, port) {
 	  var options = {
       method: method,
       formData: formData,
-	    url: url //'https://api.instagram.com/v1/tags/'+req.query.tag+'/media/recent?count='+req.query.count
+	    url: url //''+req.query.tag+'/media/recent?count='+req.query.count
 	    // , formData: {
 	    //   'Accept': 'application/json'
 	    // }
 	  };
     console.log(options.url);
 	  request(options, function(err, res, body) {
-	   // console.log(err, res, body);
 	    if (err) {
 	      deferred.reject(err);
 	      console.log(err);
@@ -93,9 +143,6 @@ module.exports = function (app, port) {
        console.log('token='+token);
        deferred.resolve(body);
     });
-//    var results = deferred.promise;
-  //  console.log(results);
-   // res.send(results);
     return deferred.promise;   
 	}	 
 }
