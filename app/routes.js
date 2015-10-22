@@ -26,10 +26,10 @@ module.exports = function (app, port) {
 
   app.get('/instagram/confirm', getToken);
 
-  app.get('/instagram', getCode);
+  app.get('/instagram/getToken', getCode);
 	
 	app.get('/instagram/:action', function(req, res) {
-    console.log('calling ' + req.params.action);
+    console.log('action=' + req.params.action);
     //console.log('calling '+path.basename(req.path));
 
     if (token === undefined ) {
@@ -54,7 +54,7 @@ module.exports = function (app, port) {
     var url = authorize_url + '?client_id=' + client_id 
                             + '&redirect_uri=' + getRedirectUri(req, action) 
                             + '&response_type=' + response_type;
-  //  console.log(url);
+    console.log(url);
     res.redirect(url);
   }
 
@@ -72,12 +72,17 @@ module.exports = function (app, port) {
         'redirect_uri'  : redirect_uri,
         'code'          : req.query.code
     };
-    console.log('url='+getActionUrl(action));
+
+    var url = getActionUrl(action);
+    console.log('url='+url);
     var method = 'POST';
 
     doHttp(access_token_url, method, formData).then(function(){
-      var url = getActionUrl(action);
-      return doHttp(url);
+      // if(url.length===0) {
+      //   res.send(token);
+      // }
+      // else
+        return doHttp(url);
     }).then(function(data){      
       res.send(data);
     }).catch( function(e) {
@@ -91,14 +96,17 @@ module.exports = function (app, port) {
     return 'http://'+ req.hostname + ':'
                     + port 
                     + config.redirect_uri 
-                    + '?action=' + action;
+                    + ((typeof action === 'string') ? '?action=' + action : '');
   }
 
   function getActionUrl(action) {
+     if (action === undefined) {
+        return '';
+     }
      var actions = action.split(ACTION__SEPARATOR);
      var url = config.actions[actions[0]]['url'];
      var params = actions[1].split(PARAM_SEPARATOR);
-     console.log(params);
+   //  console.log(params);
      var paramStr = ''
      for(var i = 0; i<params.length; i++) {
         var param = params[i].split(VALUE_SEPARATOR);
@@ -116,16 +124,15 @@ module.exports = function (app, port) {
 
 	function doHttp(url, method, formData) {
 	  var deferred = Q.defer();
-	  if(method==null) method = 'GET';
+	  if(method==null) {
+      method = 'GET';
+    }
 	  var options = {
       method: method,
       formData: formData,
-	    url: url //''+req.query.tag+'/media/recent?count='+req.query.count
-	    // , formData: {
-	    //   'Accept': 'application/json'
-	    // }
+	    url: url 
 	  };
-    console.log(options.url);
+    console.log('Calling ' + options.url);
 	  request(options, function(err, res, body) {
 	    if (err) {
 	      deferred.reject(err);
