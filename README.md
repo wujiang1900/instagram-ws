@@ -21,8 +21,11 @@ bower install
 grunt
 ```
 
-Your application should run on the default 9778 port, so in your browser just go to [http://localhost:9778/instagram/recentByTag](http://localhost:9778/instagram/recentByTag). 
+Your application should run on the default 9778 port, so in your browser just go to [http://localhost:9778/instagram/recentByTag](http://localhost:9778/instagram/recentByTag). If you want to run tests, simply type:
 
+```bash
+npm test
+```
 
 ## Configuration
 
