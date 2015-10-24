@@ -1,9 +1,14 @@
 {
-	"name": "clean-angular",
-	"version": "0.0.0",
+	"name"        : "clean-angular",
+	"version"     : "0.0.1",
 	"dependencies": {
-		"angular": "^1.2.16",
-		"angular-route": "^1.2.26",
-		"bootstrap": "~3.1.1"
+		"angular"          : "1.4.x",
+		"jquery"           : "~2.1.1",
+		"angular-route"    : "1.4.x",
+		"angular-resource" : "1.4.x",		
+		"angular-translate": "~2.3.0",
+		"angular-bootstrap": "~0.11.0",
+		"bootstrap"        : "~3.2.0",
+		"ng-table"         : "~0.8.3"
 	}
 }

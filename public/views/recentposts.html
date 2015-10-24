@@ -1,0 +1,65 @@
+<div class="jumbotron">
+<div ng-controller='postController' scroll-top>
+  <div class="page-header"><h2>Recent Posts by Instagram users</h2></div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <div class="panel-title">You can search here the most recent posts from Instagram users on a particular tag:</div>
+    </div>    
+    <div class="panel-body" translate>{{'posts.overviewText'}}
+    </div>
+  </div>
+
+  <form name='searchForm' novalidate>
+    <div class='row'> <!-- controls -->
+      <div class='form-group col-reg'>
+        <label>Tag</label>
+        <input type='text' ng-model='queryParams.tag' ng-blur="validate('tag')"/>&nbsp;&nbsp;&nbsp;
+          <span class="alert alert-danger" ng-show='(err.tag!=null) && (err.tag!=undefined)'>Error: {{err.tag}}.</span>
+      </div>
+      <div class='form-group col-lg-6'>
+        <label>count</label>
+        <input type='text' ng-model='queryParams.count' ng-blur="validateCount('count')"/>&nbsp;&nbsp;&nbsp;
+          <span class="alert alert-danger" ng-show='(err.count!=null) && (err.count!=undefined)'>Error: {{err.count}}.</span>
+      </div>
+    </div> <!-- /controls -->
+    <div class="col-lg-2">
+        <input type='button' class='btn-primary ' ng-click='submit()' value='Get Posts!' ng-disabled='(err!=null) || (err===undefined) || (pswdErr!=null) || (pswdErr===undefined)' />
+    </div>
+  </form>
+  <div class='row'>
+    <div class="clearfix"></div>
+    <div ng-if='showTable' class='col-md-12'>
+      <table class='table table-striped table-condensed' ng-table='tableParams' show-filter="true">
+        <tbody>
+          <tr ng-repeat="item in $data">
+            <td title="'Type'" filter="{ type: 'text'}" sortable="'type'">{{item.type}}</td> 
+            <td title="'Link'"><a href="{{item.link}}" target="_blank">{{item.caption}}</a></td>
+            <td title="'Created Date'" sortable="'createTS'">{{item.createTS | date:'MM/dd/yyy'}}</td>
+            <td title="'User'" filter="{ user: 'text'}" sortable="'user'">{{item.user}}</td> 
+          </tr>
+          <tr ng-if='$data.length === 0' >
+            <td colspan="6" style='background-color:#FFFFFF' class='text-center text-info'>
+              <span class="glyphicon glyphicon-info-sign"></span>
+              No results
+            </td>
+          </tr> 
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+	<p class="text-center">Developed by Cindy Wu at UT - Austin</p>
+</div>
+
+
+<script type="text/javascript">
+/*
+$( document ).ready(function() {
+  $(".err-required").each(function() {
+    $(this).attr("ng-show","searchForm."+$(this).prev().prop('name')+".$error.required && submitted");
+    $(this).load("views/common/error-required.html");
+  }
+  ); 
+}); */
+</script>
