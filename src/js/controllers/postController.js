@@ -16,20 +16,19 @@ function($scope, NgTableParams, $resource, $log) {
           }
         }]
       },
-    'count':
-      {'default' : 3
-      // validation: [
-      //   {'Please provide a count to search for.':
-      //     function(value){
-      //       return value.length===0;
-      //     }
-      //   }]
+    'rscount':
+      {'default' : 3,
+      validation: [
+        {'count has to be a number.':
+          function(value){
+            return isNaN(value);
+          }
+        }]
       }
     };
 
   $scope.queryParams = {};
   Object.keys(fields).map( function(field){
-    // $log.info(field);
     $scope.queryParams[field] = fields[field]['default'];
   });
 
@@ -44,7 +43,10 @@ function($scope, NgTableParams, $resource, $log) {
         var field_value = $scope.queryParams[field];
         if(validation[error](field_value)) {
           // $log.info(field);
-          $scope.err[field] = error;
+          $scope.err[field] = 'Error: '+ error;
+        }
+        else{
+          $scope.err[field] = null;
         }
       });
     });
@@ -53,6 +55,8 @@ function($scope, NgTableParams, $resource, $log) {
  var Api = $resource('/instagram/recentByTag');
   $scope.tableParams = new NgTableParams({}, {
     getData: function(params) {
+      $log.info(params);
+      $log.info(params.url());
       return [{type:'image', caption:'here', link: 'hello', createTS: 120903011, user: 'jiang wu'},
 
       {type:'pdf', caption:'here', link: 'hello', createTS: 123203011, user: 'cindy wu'}];
@@ -65,19 +69,34 @@ function($scope, NgTableParams, $resource, $log) {
     }
   });
 
-  $scope.validateCount = function() {
-    if(typeof $scope.queryParams.count===NaN) {
-      $scope.err.count = 'Count has to be a number.';
-    }
+  $scope.submit = function() {
+    var Api = $resource(getUrl());
+    $scope.tableParams = new NgTableParams({}, {
+      getData: function(params) {
+        // return [{type:'image', caption:'here', link: 'hello', createTS: 120903011, user: 'jiang wu'},
+
+        // {type:'pdf', caption:'here', link: 'hello', createTS: 123203011, user: 'cindy wu'}];
+        // ajax request to api
+        $log.info(params.url());
+        return Api.get(params.url()).$promise.then(function(data) {
+          $scope.showTable = true;
+          params.total(data.inlineCount); // recal. page nav controls
+          return data.results;
+        })
+        .catch(function(e){
+          $scope.showTable = false;
+        });
+      }
+    });
   };
 
-  $scope.submit = function() {
-    if(!isValid) {
-      return;
-    }
-    // $scope.queryParams.tag = $scope.tag;
-    // $scope.queryParams.count = $scope.count;
-  };
+  function getUrl(){
+    var url = '/instagram/recentByTag?';
+    Object.keys($scope.queryParams).map(function(param){
+      url += param+'='+$scope.queryParams[param]+'&';
+    });
+    return url;
+  }
   
 }
 ]);

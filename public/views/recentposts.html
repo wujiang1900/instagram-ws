@@ -1,4 +1,4 @@
-<div class="jumbotron">
+<div class="jumbotron" style="position: relative; top: -25px">
 <div ng-controller='postController' scroll-top>
   <div class="page-header"><h2>Recent Posts by Instagram users</h2></div>
   <div class="panel panel-default">
@@ -11,19 +11,19 @@
 
   <form name='searchForm' novalidate>
     <div class='row'> <!-- controls -->
-      <div class='form-group col-reg'>
+      <div class='form-group col-lg-6'>
         <label>Tag</label>
         <input type='text' ng-model='queryParams.tag' ng-blur="validate('tag')"/>&nbsp;&nbsp;&nbsp;
-          <span class="alert alert-danger" ng-show='(err.tag!=null) && (err.tag!=undefined)'>Error: {{err.tag}}.</span>
+          <span class="alert alert-danger" ng-show='(err.tag!=null) && (err.tag!=undefined)'>{{err.tag}}</span>
       </div>
       <div class='form-group col-lg-6'>
         <label>count</label>
-        <input type='text' ng-model='queryParams.count' ng-blur="validateCount('count')"/>&nbsp;&nbsp;&nbsp;
-          <span class="alert alert-danger" ng-show='(err.count!=null) && (err.count!=undefined)'>Error: {{err.count}}.</span>
+        <input type='text' ng-model='queryParams.rscount' ng-blur="validate('rscount')"/>&nbsp;&nbsp;&nbsp;
+          <span class="alert alert-danger" ng-show='err.rscount'>{{err.rscount}}</span>
       </div>
     </div> <!-- /controls -->
     <div class="col-lg-2">
-        <input type='button' class='btn-primary ' ng-click='submit()' value='Get Posts!' ng-disabled='(err!=null) || (err===undefined) || (pswdErr!=null) || (pswdErr===undefined)' />
+        <input type='button' class='btn-primary ' ng-click='submit()' value='Get Posts!' ng-disabled='(err.count || err.tag)' />
     </div>
   </form>
   <div class='row'>
@@ -49,7 +49,7 @@
   </div>
 </div>
 
-	<p class="text-center">Developed by Cindy Wu at UT - Austin</p>
+	<h3 class="text-center">Developed by Cindy Wu at UT - Austin</h3>
 </div>
 
 
