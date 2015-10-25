@@ -1,14 +1,13 @@
 (function () {
   'use strict';
   var express = require("express"),
-		app = express(),
-		port;
+		app = express();
   var path = require('path'),
     dirName = __dirname;
   var config = require('simpler-config').load(require(dirName + '/config.json'));
 
   // Set port
-  port = config.port || 9778;
+ var port = config.port || 9778;
 
   // Use public directory for static files
   app.use(express.static(__dirname + '/public'));

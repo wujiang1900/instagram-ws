@@ -2,8 +2,8 @@
 'use strict';
 
 angular.module('instApp')
-.controller('postController',['$scope', 'NgTableParams', '$resource', '$log',
-function($scope, NgTableParams, $resource, $log) {
+.controller('postController',['$scope', 'NgTableParams', '$resource', '$log', 'RecentPost',
+function($scope, NgTableParams, $resource, $log, RecentPost) {
   $scope.showTable = true;
 
   var fields = 
@@ -60,27 +60,21 @@ function($scope, NgTableParams, $resource, $log) {
       return [{type:'image', caption:'here', link: 'hello', createTS: 120903011, user: 'jiang wu'},
 
       {type:'pdf', caption:'here', link: 'hello', createTS: 123203011, user: 'cindy wu'}];
-      // ajax request to api
-      // return Api.get(params.url()).$promise.then(function(data) {
-      //   $scope.showTable = true;
-      //   params.total(data.inlineCount); // recal. page nav controls
-      //   return data.results;
-      // });
     }
   });
 
   $scope.submit = function() {
     var Api = $resource(getUrl());
     $scope.tableParams = new NgTableParams({}, {
-      getData: function(params) {
+      getData: function(table) {
         // return [{type:'image', caption:'here', link: 'hello', createTS: 120903011, user: 'jiang wu'},
 
         // {type:'pdf', caption:'here', link: 'hello', createTS: 123203011, user: 'cindy wu'}];
         // ajax request to api
-        $log.info(params.url());
-        return Api.get(params.url()).$promise.then(function(data) {
+        $log.info(table.url());
+        return Api.get(table.url()).$promise.then(function(data) {
           $scope.showTable = true;
-          params.total(data.inlineCount); // recal. page nav controls
+          table.total(data.inlineCount); // recal. page nav controls
           return data.results;
         })
         .catch(function(e){

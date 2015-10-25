@@ -29,8 +29,12 @@ module.exports = function (app, port) {
   app.get('/instagram/getToken', getCode);
 	
 	app.get('/instagram/:action', function(req, res) {
+    console.log('query=' + req.query.page);
+    console.log('params=' + req.params.page);
     console.log('action=' + req.params.action);
     //console.log('calling '+path.basename(req.path));
+
+  //  req.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
 
     var action = getAction(req, req.params.action);
     if (token === undefined ) {
@@ -68,6 +72,7 @@ module.exports = function (app, port) {
                             + '&redirect_uri=' + getRedirectUri(req, action) 
                             + '&response_type=' + response_type;
     // console.log(url);
+    res.set('Access-Control-Allow-Origin','*');
     res.redirect(url);
   }
 
@@ -137,6 +142,9 @@ module.exports = function (app, port) {
       method: method,
       formData: formData,
 	    url: url 
+      // headers: {
+      //   'Access-Control-Allow-Origin': '*'
+      // }
 	  };
     console.log('Calling ' + options.url);
 	  request(options, function(err, res, body) {
