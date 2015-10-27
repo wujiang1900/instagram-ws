@@ -13,7 +13,7 @@ angular.module('instApp')
         get:{
             method:'GET',
             isArray:false,
-            headers:{'Access-Control-Allow-Origin': '*'} 
+            headers:{'Access-Control-Allow-Origin': 'https://api.instagram.com'} 
         },
     });
   // });

@@ -1,3 +1,6 @@
+
+(Got problem with instagram auth mechanism (redirecting): "No 'Access-Control-Allow-Origin' header is present" error. Fixed it by moving the getCode call to Frontend, and add header in the request, but then got "ajax cross-domain call not allowed" error, which requires the server (Instagram.com) to implement CORS (http://techblog.constantcontact.com/software-development/using-cors-for-cross-domain-ajax-requests/) )
+
 This is a web app to make web api calls to Instagram endpoints, and display results on webpages. It is implemented using [AngularJS](http://angularjs.org/) and [Express](http://expressjs.com/), a flavor of [NodeJS](http://www.nodejs.org/).
 
 The boilerplate javaScript code was generated with [BEAN Stack generator](https://www.npmjs.com/package/generator-bean-stack).
