@@ -25,8 +25,8 @@ module.exports = function (app, port) {
   var token = undefined;
 
   app.get('/instagram/confirm', getToken);
-
-  app.get('/instagram/getToken', getCode);
+  app.get('/instagram/codeUrl', getCodeUrl);
+  app.get('/instagram/token', getCode);
 	
 	app.get('/instagram/:action', function(req, res) {
     console.log('query=' + req.query.page);
@@ -38,7 +38,19 @@ module.exports = function (app, port) {
 
     var action = getAction(req, req.params.action);
     if (token === undefined ) {
-      getCode(req, res, action);
+      if(req.query.code) {
+        // for ajax call (e.g. angular) 
+        // to avoid “No 'Access-Control-Allow-Origin' header is present" error
+        // we have to pass in 'code' param from client side
+        // since res.redirect will not work
+     //  res = null;
+      }
+      else {
+        // this block is for calling action directly from postman or browser
+        // ajax call (e.g. angular)  needs to pass in 'code' param, 
+        //  otherwise, will get “No 'Access-Control-Allow-Origin' header is present" error
+        getCode(req, res, action);
+      }
     }
     else {
       doAction(res, action);
@@ -67,19 +79,38 @@ module.exports = function (app, port) {
     return action + ACTION__SEPARATOR + paramStr;
   }
 
-  function getCode(req, res, action) {
+  function getCodeUrl(req, res, action) {
+    // console.log(action);
+    if(res) {
+      action=null;
+    }
     var url = authorize_url + '?client_id=' + client_id 
-                            + '&redirect_uri=' + getRedirectUri(req, action) 
-                            + '&response_type=' + response_type;
+                      + '&redirect_uri=' + getRedirectUri(req, action) 
+                        + '&response_type=' + response_type;
+    if(res) {
+      res.send({'url': url});
+    }
+    else {
+      return url;
+    }
+  }
+
+  function getCode(req, res, action) {
     // console.log(url);
-    res.set('Access-Control-Allow-Origin','*');
-    res.redirect(url);
+    if(req.query.code) {
+      getToken(req, res);
+    }
+    else {
+      // can only be called from postman or browser, not from ajax call (e.g. angular) 
+      //  otherwise, will get “No 'Access-Control-Allow-Origin' header is present" error
+      res.redirect(getCodeUrl(req, null, action));
+    }
   }
 
   function getToken(req, res) {
 
     //todo:  handle errors (see  https://instagram.com/developer/authentication/)
-
+console.log('1');
     var action = req.query.action;
     var redirect_uri = getRedirectUri(req, action);
 
@@ -90,10 +121,12 @@ module.exports = function (app, port) {
         'redirect_uri'  : redirect_uri,
         'code'          : req.query.code
     };
-
+console.log('3');
     doHttp(access_token_url, 'POST', formData).then(function(){
+      console.log(token);
       if (action === undefined) {
-        res.send(token);
+        if(res)
+          res.send(token);
       }
       else { 
         doAction(res, action);
@@ -103,6 +136,7 @@ module.exports = function (app, port) {
   }
 
   function getRedirectUri(req, action) {
+    console.log('2');
     return 'http://'+ req.hostname + ':'
                     + port 
                     + config.redirect_uri 
@@ -161,7 +195,6 @@ module.exports = function (app, port) {
         deferred.reject(err);
         return;
       }
-       console.log('token='+token);
        deferred.resolve(body);
     });
     return deferred.promise;   

@@ -9,6 +9,7 @@
 	"actions"			:	{ "recentByTag": 
 								{"url" : "https://api.instagram.com/v1/tags/{tag}/media/recent?access_token={ACCESS-TOKEN}",
 								 "params" : ["tag", "count"]
-								}
+								},
+							  "userInfo" : "https://api.instagram.com/v1/users/{user-id}/?access_token={ACCESS-TOKEN}"
 							 }	
 }

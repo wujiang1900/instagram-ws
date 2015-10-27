@@ -1,20 +1,21 @@
 (function () {
   'use strict';
-  var express = require("express"),
-		app = express();
-  var path = require('path'),
+
+var express = require('express'),
+    http = require('http'),
+    app = express();
+
+var path = require('path'),
     dirName = __dirname;
   var config = require('simpler-config').load(require(dirName + '/config.json'));
+  var port = process.env.PORT || config.port || 9778;
+  app.set('port', port);
 
-  // Set port
- var port = config.port || 9778;
-
-  // Use public directory for static files
   app.use(express.static(__dirname + '/public'));
-  // Include the routes module		
+    // Include the routes module    
   require('./app/routes')(app, port);
 
-  // Your code here
-  console.log('Listening on port: ' + port);
-  app.listen(port);
+  http.createServer(app).listen(app.get('port'), function() {
+    console.log("Express server listening on port " + app.get('port'));
+  });
 })();

@@ -2,8 +2,8 @@
 'use strict';
 
 angular.module('instApp')
-.controller('postController',['$scope', 'NgTableParams', '$resource', '$log', 'RecentPost',
-function($scope, NgTableParams, $resource, $log, RecentPost) {
+.controller('postController',['$scope', 'NgTableParams', '$resource', '$log', 'InstCode',
+function($scope, NgTableParams, $resource, $log, InstCode) {
   $scope.showTable = true;
 
   var fields = 
@@ -63,24 +63,32 @@ function($scope, NgTableParams, $resource, $log, RecentPost) {
     }
   });
 
-  $scope.submit = function() {
-    var Api = $resource(getUrl());
-    $scope.tableParams = new NgTableParams({}, {
-      getData: function(table) {
-        // return [{type:'image', caption:'here', link: 'hello', createTS: 120903011, user: 'jiang wu'},
 
-        // {type:'pdf', caption:'here', link: 'hello', createTS: 123203011, user: 'cindy wu'}];
-        // ajax request to api
-        $log.info(table.url());
-        return Api.get(table.url()).$promise.then(function(data) {
-          $scope.showTable = true;
-          table.total(data.inlineCount); // recal. page nav controls
-          return data.results;
-        })
-        .catch(function(e){
-          $scope.showTable = false;
-        });
-      }
+  $scope.submit = function() {
+    InstCode.get({}).$promise.then(function(r) {
+      $log.info(r);
+
+      var Api = $resource(getUrl());
+      $scope.tableParams = new NgTableParams({}, {
+        getData: function(table) {
+          // return [{type:'image', caption:'here', link: 'hello', createTS: 120903011, user: 'jiang wu'},
+
+          // {type:'pdf', caption:'here', link: 'hello', createTS: 123203011, user: 'cindy wu'}];
+          // ajax request to api
+          $log.info(table.url());
+          return Api.get(table.url()).$promise.then(function(data) {
+            $scope.showTable = true;
+            table.total(data.inlineCount); // recal. page nav controls
+            return data.results;
+          })
+          .catch(function(e){
+            $scope.showTable = false;
+          });
+        }
+      });
+    })
+    .catch(function(e){
+      $log.info('ajax error'+ e);
     });
   };
 
