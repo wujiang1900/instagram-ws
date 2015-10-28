@@ -26,7 +26,7 @@ module.exports = function (app, port) {
 
   app.get('/instagram/confirm', getToken);
 
-  app.get('/instagram/getToken', getCode);
+  // app.get('/instagram/getToken', getCode);
 	
 	app.get('/instagram/:action', performAction);
 
@@ -48,7 +48,7 @@ module.exports = function (app, port) {
       return getCode(req, res, action);
     }
     else {
-      return doAction(req, res, action);
+     return doAction(req, res, action);
     }
   }
 
@@ -63,9 +63,9 @@ module.exports = function (app, port) {
     doHttp(getActionUrl(action))
     .then(function(result){
       if(action.indexOf('tag==CapitalOne')>-1)
-         getUserData(req, res, result);  
+         return getUserData(req, res, result);  
       else    
-        res.send(result.data);
+        return result.data;
     })
     .catch(function(e) {
     //todo: error page
@@ -75,11 +75,18 @@ module.exports = function (app, port) {
   }
 
   function getUserData(req, res, data) {
-    data.map(function(post){      
+    var userInfo = [];
+    data.map(function(post, index){ 
+    console.log(index);     
       req.params.action = 'getUser';
       req.query.userId = post.user.id;
-      performAction(req, res);
+      userInfo[index] = performAction(req, res);
     });
+    promise.all(userInfo).then(function(values){
+      console.log(values);
+      res.send(values);
+    });
+   // .catch();
   }
 
   /* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
@@ -94,6 +101,8 @@ module.exports = function (app, port) {
 
 /* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
   function getActionUrl(action) {
+
+      console.log("getting url, action="+action);
      var actions = action.split(ACTION__SEPARATOR);
      var url = config.actions[actions[0]]['url'];
      var params = actions[1].split(PARAM_SEPARATOR);
@@ -110,6 +119,7 @@ module.exports = function (app, port) {
         }
      }
      url = url.replace('{ACCESS-TOKEN}', token);
+     console.log("getting url, url="+url + paramStr);
      return url + paramStr;
   }
 
@@ -123,11 +133,19 @@ module.exports = function (app, port) {
   }
 
   function getToken(req, res) {
+   // if(token) return doAction(req, res, action);
 
     //todo:  handle errors (see  https://instagram.com/developer/authentication/)
 
-    console.log('getting token...');
     var action = req.query.action;
+    if(typeof action !== 'string') {
+      console.log("Action not a string!")
+      return;
+    }
+
+    if(token) 
+      return doAction(req, res, action);
+
     var redirect_uri = getRedirectUri(req, action);
 
     var formData = {
@@ -141,15 +159,18 @@ module.exports = function (app, port) {
     doHttp(access_token_url, 'POST', formData).then(function(){
       if (action === undefined) {
         res.send(token);
+      console.log("action undefined.")
       }
       else { 
-        return doAction(req, res, action);
+        console.log("token got successfully");
+      //  return doAction(req, res, action);
       }
     });
     // finally () ??
   }
 
   function getRedirectUri(req, action) {
+    // console.log("action to redirect="+action);
     return 'http://'+ req.hostname + ':'
                     + port 
                     + config.redirect_uri 
