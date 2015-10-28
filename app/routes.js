@@ -28,29 +28,58 @@ module.exports = function (app, port) {
 
   app.get('/instagram/getToken', getCode);
 	
-	app.get('/instagram/:action', function(req, res) {
+	app.get('/instagram/:action', performAction);
+
+  // app.get('/instagram/CapitalOne', function (req, res) {
+  //   req.params.action = 'recentByTag?tag='+req.query.action
+  //   performAction(req, null);
+  // });
+
+  function performAction(req, res) {
     console.log('action=' + req.params.action);
     //console.log('calling '+path.basename(req.path));
 
+    if(req.params.action.toUpperCase()==='CapitalOne'.toUpperCase()) {
+      doCapitalOne(req, res);
+    }
+
     var action = getAction(req, req.params.action);
     if (token === undefined ) {
-      getCode(req, res, action);
+      return getCode(req, res, action);
     }
     else {
-      doAction(res, action);
+      return doAction(req, res, action);
     }
-	});
+  }
 
-  function doAction(res, action) {
+  function doCapitalOne(req, res) {
+    req.params.action = 'recentByTag';
+    req.query.tag='CapitalOne';
+    performAction(req, res);
+   // res.send(data);
+  }
+
+  function doAction(action, req, res) {
     doHttp(getActionUrl(action))
-    .then(function(data){      
-            res.send(data);
-          })
+    .then(function(result){
+      if(action.indexOf('tag==CapitalOne')>-1)
+         getUserData(req, res, result);  
+      else    
+        res.send(result.data);
+    })
     .catch(function(e) {
-      //todo: error page
-        console.log(e);
-      });    
+    //todo: error page
+      console.log(e);
+    });    
     // finally () ??
+  }
+
+  function getUserData(req, res, data) {
+    data.map(function(post){      
+      req.params.action = 'getUser';
+      req.query.userId = post.user.id;
+      performAction(req, res);
+    });
   }
 
   /* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
@@ -63,47 +92,7 @@ module.exports = function (app, port) {
     return action + ACTION__SEPARATOR + paramStr;
   }
 
-  function getCode(req, res, action) {
-    var url = authorize_url + '?client_id=' + client_id 
-                            + '&redirect_uri=' + getRedirectUri(req, action) 
-                            + '&response_type=' + response_type;
-    // console.log(url);
-    res.redirect(url);
-  }
-
-  function getToken(req, res) {
-
-    //todo:  handle errors (see  https://instagram.com/developer/authentication/)
-
-    var action = req.query.action;
-    var redirect_uri = getRedirectUri(req, action);
-
-    var formData = {
-        'client_id'     : client_id,
-        'client_secret' : client_secret,
-        'grant_type'    : grant_type,
-        'redirect_uri'  : redirect_uri,
-        'code'          : req.query.code
-    };
-
-    doHttp(access_token_url, 'POST', formData).then(function(){
-      if (action === undefined) {
-        res.send(token);
-      }
-      else { 
-        doAction(res, action);
-      }
-    });
-    // finally () ??
-  }
-
-  function getRedirectUri(req, action) {
-    return 'http://'+ req.hostname + ':'
-                    + port 
-                    + config.redirect_uri 
-                    + ((typeof action === 'string') ? '?action=' + action : '');
-  }
-
+/* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
   function getActionUrl(action) {
      var actions = action.split(ACTION__SEPARATOR);
      var url = config.actions[actions[0]]['url'];
@@ -124,9 +113,52 @@ module.exports = function (app, port) {
      return url + paramStr;
   }
 
-  /* call url 
-    and 
-  return a promise
+  function getCode(req, res, action) {
+    console.log('getting code...');
+    var url = authorize_url + '?client_id=' + client_id 
+                            + '&redirect_uri=' + getRedirectUri(req, action) 
+                            + '&response_type=' + response_type;
+    // console.log(url);
+    res.redirect(url);
+  }
+
+  function getToken(req, res) {
+
+    //todo:  handle errors (see  https://instagram.com/developer/authentication/)
+
+    console.log('getting token...');
+    var action = req.query.action;
+    var redirect_uri = getRedirectUri(req, action);
+
+    var formData = {
+        'client_id'     : client_id,
+        'client_secret' : client_secret,
+        'grant_type'    : grant_type,
+        'redirect_uri'  : redirect_uri,
+        'code'          : req.query.code
+    };
+
+    doHttp(access_token_url, 'POST', formData).then(function(){
+      if (action === undefined) {
+        res.send(token);
+      }
+      else { 
+        return doAction(req, res, action);
+      }
+    });
+    // finally () ??
+  }
+
+  function getRedirectUri(req, action) {
+    return 'http://'+ req.hostname + ':'
+                    + port 
+                    + config.redirect_uri 
+                    + ((typeof action === 'string') ? '?action=' + action : '');
+  }
+
+  /** perform a http request  
+        and 
+      return a promise
   */
 	function doHttp(url, method, formData) {
 	  var deferred = Q.defer();

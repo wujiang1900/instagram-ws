@@ -7,8 +7,12 @@
 	"authorize_url"		:	"https://api.instagram.com/oauth/authorize/",
 	"access_token_url"	:	"https://api.instagram.com/oauth/access_token",
 	"actions"			:	{ "recentByTag": 
-								{"url" : "https://api.instagram.com/v1/tags/{tag}/media/recent?access_token={ACCESS-TOKEN}",
+								{"url" 	: "https://api.instagram.com/v1/tags/{tag}/media/recent?access_token={ACCESS-TOKEN}",
 								 "params" : ["tag", "count"]
+								},
+							  "getUser":
+								{"url"	: "https://api.instagram.com/v1/users/{userId}/?access_token={ACCESS-TOKEN}",
+								 "params" : ["userId"]
 								}
 							 }	
 }
