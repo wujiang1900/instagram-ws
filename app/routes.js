@@ -30,22 +30,16 @@ module.exports = function (app, port) {
 	
 	app.get('/instagram/:action', performAction);
 
-  // app.get('/instagram/CapitalOne', function (req, res) {
-  //   req.params.action = 'recentByTag?tag='+req.query.action
-  //   performAction(req, null);
-  // });
-
   function performAction(req, res) {
-    console.log('action=' + req.params.action);
     //console.log('calling '+path.basename(req.path));
-
-    if(req.params.action.toUpperCase()==='CapitalOne'.toUpperCase()) {
+// console.log('req.params.action='+req.params.action);
+    if(/CapitalOne/i.test(req.params.action)) {
       doCapitalOne(req, res);
     }
 
-    var action = getAction(req, req.params.action);
+    var action = buildActionStr(req, req.params.action);
     if (token === undefined ) {
-      return getCode(req, res, action);
+       getCode(req, res, action);
     }
     else {
      return doAction(req, res, action);
@@ -55,42 +49,76 @@ module.exports = function (app, port) {
   function doCapitalOne(req, res) {
     req.params.action = 'recentByTag';
     req.query.tag='CapitalOne';
-    performAction(req, res);
+    res.send(performAction(req, res));
    // res.send(data);
   }
 
-  function doAction(action, req, res) {
+  /** process the action  
+        and 
+      return a promise with data
+  */
+  function doAction(req, res, action) {
+    var deferred = Q.defer();
     doHttp(getActionUrl(action))
     .then(function(result){
-      if(action.indexOf('tag==CapitalOne')>-1)
-         return getUserData(req, res, result);  
+      // console.log("got result. action="+action);
+      var data;
+      if(/recentByTag::tag==CapitalOne/i.test(action)) {
+         data = compileResults(req, res, JSON.parse(result).data);  
+         console.log('data='+data);
+       }
       else    
-        return result.data;
+         data = JSON.parse(result).data;
+        
+      deferred.resolve(data);
     })
-    .catch(function(e) {
-    //todo: error page
-      console.log(e);
-    });    
+    // .catch(function(e) {
+    //   console.log(e);
+    //   deferred.reject(e);
+    // });    
     // finally () ??
+    return deferred.promise;
   }
 
-  function getUserData(req, res, data) {
-    var userInfo = [];
-    data.map(function(post, index){ 
-    console.log(index);     
+  function compileResults(req, res, data) {
+    var userInfoPromise = [];
+    data.map(function(media, index){ 
+    // console.log(index);     
       req.params.action = 'getUser';
-      req.query.userId = post.user.id;
-      userInfo[index] = performAction(req, res);
+      req.query.userId = media.user.id;
+      userInfoPromise[index] = performAction(req, null);
     });
-    promise.all(userInfo).then(function(values){
-      console.log(values);
-      res.send(values);
+
+    var result = [];
+    Promise.all(userInfoPromise).then(function(info){
+      data.map(function(m, i){ 
+        console.log('cons');
+        result[i] = constructResult (m, info[i]);
+      });
+      res.send(result);
+    })
+    .catch(function(e) {
+      console.log(e);
+    })
+    .finally(function(){
+      return result;
     });
-   // .catch();
+  }
+
+  function constructResult (m, userInfo) {
+
+    var r={};
+    r.type = m.type;
+    r.created_time = m.created_time;
+    r.link = m.link;
+    r.likeCount = m.likes.count;
+    m.user.counts = userInfo.counts;
+    r.user = m.user;
+    return r;
   }
 
   /* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
-  function getAction(req, action) {
+  function buildActionStr(req, action) {
     var params = config.actions[action]['params'];
     var paramStr = '';
     for(var i = 0; i<params.length; i++) {
@@ -102,7 +130,7 @@ module.exports = function (app, port) {
 /* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
   function getActionUrl(action) {
 
-      console.log("getting url, action="+action);
+      // console.log("getting url, action="+action);
      var actions = action.split(ACTION__SEPARATOR);
      var url = config.actions[actions[0]]['url'];
      var params = actions[1].split(PARAM_SEPARATOR);
@@ -119,7 +147,7 @@ module.exports = function (app, port) {
         }
      }
      url = url.replace('{ACCESS-TOKEN}', token);
-     console.log("getting url, url="+url + paramStr);
+     // console.log("getting url, url="+url + paramStr);
      return url + paramStr;
   }
 
@@ -129,6 +157,7 @@ module.exports = function (app, port) {
                             + '&redirect_uri=' + getRedirectUri(req, action) 
                             + '&response_type=' + response_type;
     // console.log(url);
+    // gettingToken = true;
     res.redirect(url);
   }
 
@@ -138,13 +167,13 @@ module.exports = function (app, port) {
     //todo:  handle errors (see  https://instagram.com/developer/authentication/)
 
     var action = req.query.action;
-    if(typeof action !== 'string') {
-      console.log("Action not a string!")
-      return;
-    }
+    // if(typeof action !== 'string') {
+    //   console.log("Action not a string!")
+    //   return;
+    // }
 
     if(token) 
-      return doAction(req, res, action);
+      res.send(token);
 
     var redirect_uri = getRedirectUri(req, action);
 
@@ -158,12 +187,12 @@ module.exports = function (app, port) {
 
     doHttp(access_token_url, 'POST', formData).then(function(){
       if (action === undefined) {
+      console.log("action undefined.");
         res.send(token);
-      console.log("action undefined.")
       }
       else { 
         console.log("token got successfully");
-      //  return doAction(req, res, action);
+        return doAction(req, res, action);
       }
     });
     // finally () ??
@@ -191,7 +220,7 @@ module.exports = function (app, port) {
       formData: formData,
 	    url: url 
 	  };
-    console.log('Calling ' + options.url);
+    // console.log('Calling ' + options.url);
 	  request(options, function(err, res, body) {
 	    if (err) {
 	      deferred.reject(err);
@@ -199,14 +228,15 @@ module.exports = function (app, port) {
 	      return;
 	    }
      //   console.log(body);
+     if(token===undefined)
       try {
         token = JSON.parse(body).access_token;
       } catch(e) {
         console.log(e);
-        deferred.reject(err);
+        deferred.reject(e);
         return;
       }
-       console.log('token='+token);
+      
        deferred.resolve(body);
     });
     return deferred.promise;   
