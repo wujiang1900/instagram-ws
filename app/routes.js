@@ -32,7 +32,7 @@ module.exports = function (app, port) {
 
   function performAction(req, res) {
     //console.log('calling '+path.basename(req.path));
-// console.log('req.params.action='+req.params.action);
+ // console.log('req.params.action='+req.params.action);
     if(/CapitalOne/i.test(req.params.action)) {
       doCapitalOne(req, res);
     }
@@ -49,7 +49,7 @@ module.exports = function (app, port) {
   function doCapitalOne(req, res) {
     req.params.action = 'recentByTag';
     req.query.tag='CapitalOne';
-    res.send(performAction(req, res));
+    performAction(req, res);
    // res.send(data);
   }
 
@@ -89,13 +89,16 @@ module.exports = function (app, port) {
       userInfoPromise[index] = performAction(req, null);
     });
 
+    userInfoPromise[data.length+1] = runSentimentAnalysis(data);
+
     var result = [];
-    Promise.all(userInfoPromise).then(function(info){
+    Promise.all(userInfoPromise).then(function(info){    
       data.map(function(m, i){ 
-        console.log('cons');
+        // console.log('cons');
         result[i] = constructResult (m, info[i]);
       });
-      res.send(result);
+      // res.send(result);
+      res.send({'mediaAndUserInfo':result, 'sentimentCount':info[data.length+1]});
     })
     .catch(function(e) {
       console.log(e);
@@ -115,6 +118,61 @@ module.exports = function (app, port) {
     m.user.counts = userInfo.counts;
     r.user = m.user;
     return r;
+  }
+
+  /** call 3rd party sentiment analysis api to get the sentiment for each media  
+        and 
+      return a promise with the total count result 
+  */
+  function runSentimentAnalysis(data) {
+    var deferred = Q.defer();
+    var count = {positive:0, negative:0, neutral:0};
+    var sentimentPromise = [];
+    data.map(function(media, index){
+      var medialUrl = encodeURIComponent(media.link);
+      var url = 'http://gateway-a.watsonplatform.net/calls/url/URLGetTargetedSentiment?targets=capitalone&url='
+                + medialUrl + '&outputMode=json&apikey=c04b23aa4889edb454c4b72e6ae2cae79fa25bfe';
+      // console.log(url);
+      sentimentPromise[index] = doHttp(url);
+    });
+
+    Promise.all(sentimentPromise).then(function(results) {
+      results.map(function(result) {
+        result = JSON.parse(result);
+        switch(result["status"]) {
+          case 'OK':          
+        // console.log('result docSentiment type='+ result.docSentiment.type);
+            switch(result.docSentiment.type) {
+              case 'positive':
+                count.positive++; 
+                break;
+              case 'negative':
+                count.negative++; 
+                break;
+              case 'neutral':
+              default:
+                count.neutral++; 
+            }
+          case 'ERROR':
+          default:
+            // console.log(result.statusInfo);
+            count.neutral++;
+            // console.log('netural='+count.neutral);
+        }
+      });
+
+      deferred.resolve(count);
+    })
+    .catch(function(e) {
+      console.log(e);
+      deferred.reject(e);
+    });
+    // .finally(function(e) {
+    //   console.log(count.positive);
+    // }
+    // );
+
+      return deferred.promise;
   }
 
   /* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
@@ -220,7 +278,7 @@ module.exports = function (app, port) {
       formData: formData,
 	    url: url 
 	  };
-    // console.log('Calling ' + options.url);
+     // console.log('Calling ' + options.url);
 	  request(options, function(err, res, body) {
 	    if (err) {
 	      deferred.reject(err);

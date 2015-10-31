@@ -24,7 +24,11 @@ You need to have Ruby and Sass installed and in your PATH for this task to work.
 
 When you've confirmed you have Ruby installed, run gem install sass to install Sass. 
 
-Your application should run on the default 9778 port, so in your browser just go to [http://localhost:9778/instagram](http://localhost:3000/versions.html). If you want to run tests, simply type:
+Your application should run on the default 9778 port, so in your browser just go to [http://localhost:9778/instagram/CapitalOne?count=20](http://localhost:9778/instagram/CapitalOne?count=20). 
+
+AlchemyAPI Sentiment Analysis free service to determine the sentiment towards CapitalOne in the media. Need to register with AlchemyAPI (http://www.alchemyapi.com/api/register.html) for an AlchemyAPI key.
+
+If you want to run tests, simply type:
 
 ```bash
 npm test
