@@ -24,7 +24,16 @@ bower install
 grunt
 ```
 
-Your application should run on the default 9778 port, so in your browser just go to [http://localhost:9778/instagram/recentByTag?count=5&tag=YOUR_TAG](http://localhost:9778/instagram/recentByTag?count=5&tag=CapitalOne). If you want to run tests, simply type:
+You need to have Ruby and Sass installed and in your PATH for this task to work.  If you're on OS X or Linux you probably already have Ruby installed; test with ruby -v in your terminal. To install Ruby on Windows, visit http://rubyinstaller.org/downloads/. 
+
+
+When you've confirmed you have Ruby installed, run gem install sass to install Sass. 
+
+Your application should run on the default 9778 port, so in your browser just go to [http://localhost:9778/instagram/CapitalOne?count=20](http://localhost:9778/instagram/CapitalOne?count=20). 
+
+AlchemyAPI Sentiment Analysis free service to determine the sentiment towards CapitalOne in the media. Need to register with AlchemyAPI (http://www.alchemyapi.com/api/register.html) for an AlchemyAPI key.
+
+If you want to run tests, simply type:
 
 ```bash
 npm test (NO test file yet...)

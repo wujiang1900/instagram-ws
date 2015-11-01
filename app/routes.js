@@ -25,52 +25,160 @@ module.exports = function (app, port) {
   var token = undefined;
 
   app.get('/instagram/confirm', getToken);
-  app.get('/instagram/codeUrl', getCodeUrl);
-  app.get('/instagram/token', getCode);
+
+  // app.get('/instagram/getToken', getCode);
 	
-	app.get('/instagram/:action', function(req, res) {
-    console.log('query=' + req.query.page);
-    console.log('params=' + req.params.page);
-    console.log('action=' + req.params.action);
+	app.get('/instagram/:action', performAction);
+
+  function performAction(req, res) {
     //console.log('calling '+path.basename(req.path));
+ // console.log('req.params.action='+req.params.action);
+    if(/CapitalOne/i.test(req.params.action)) {
+      doCapitalOne(req, res);
+    }
 
-  //  req.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
-
-    var action = getAction(req, req.params.action);
+    var action = buildActionStr(req, req.params.action);
     if (token === undefined ) {
-      if(req.query.code) {
-        // for ajax call (e.g. angular) 
-        // to avoid “No 'Access-Control-Allow-Origin' header is present" error
-        // we have to pass in 'code' param from client side
-        // since res.redirect will not work
-     //  res = null;
-      }
-      else {
-        // this block is for calling action directly from postman or browser
-        // ajax call (e.g. angular)  needs to pass in 'code' param, 
-        //  otherwise, will get “No 'Access-Control-Allow-Origin' header is present" error
-        getCode(req, res, action);
-      }
+       getCode(req, res, action);
     }
     else {
-      doAction(res, action);
+     return doAction(req, res, action);
     }
-	});
+  }
 
-  function doAction(res, action) {
+  function doCapitalOne(req, res) {
+    req.params.action = 'recentByTag';
+    req.query.tag='CapitalOne';
+    performAction(req, res);
+   // res.send(data);
+  }
+
+  /** process the action  
+        and 
+      return a promise with data
+  */
+  function doAction(req, res, action) {
+    var deferred = Q.defer();
     doHttp(getActionUrl(action))
-    .then(function(data){      
-            res.send(data);
-          })
-    .catch(function(e) {
-      //todo: error page
-        console.log(e);
-      });    
+    .then(function(result){
+      // console.log("got result. action="+action);
+      var data;
+      if(/recentByTag::tag==CapitalOne/i.test(action)) {
+         data = compileResults(req, res, JSON.parse(result).data);  
+         console.log('data='+data);
+       }
+      else    
+         data = JSON.parse(result).data;
+        
+      deferred.resolve(data);
+    })
+    // .catch(function(e) {
+    //   console.log(e);
+    //   deferred.reject(e);
+    // });    
     // finally () ??
+    return deferred.promise;
+  }
+
+  function compileResults(req, res, data) {
+    var userInfoPromise = [];
+    data.map(function(media, index){ 
+    // console.log(index);     
+      req.params.action = 'getUser';
+      req.query.userId = media.user.id;
+      userInfoPromise[index] = performAction(req, null);
+    });
+
+    userInfoPromise[data.length+1] = runSentimentAnalysis(data);
+
+    var result = [];
+    Promise.all(userInfoPromise).then(function(info){    
+      data.map(function(m, i){ 
+        // console.log('cons');
+        result[i] = constructResult (m, info[i]);
+      });
+      // res.send(result);
+      res.send({'mediaAndUserInfo':result, 'sentimentCount':info[data.length+1]});
+    })
+    .catch(function(e) {
+      console.log(e);
+    })
+    .finally(function(){
+      return result;
+    });
+  }
+
+  function constructResult (m, userInfo) {
+
+    var r={};
+    r.type = m.type;
+    r.created_time = m.created_time;
+    r.link = m.link;
+    r.likeCount = m.likes.count;
+    m.user.counts = userInfo.counts;
+    r.user = m.user;
+    return r;
+  }
+
+  /** call 3rd party sentiment analysis api to get the sentiment for each media  
+        and 
+      return a promise with the total count result 
+  */
+  function runSentimentAnalysis(data) {
+    var deferred = Q.defer();
+    var count = {positive:0, negative:0, neutral:0};
+    var sentimentPromise = [];
+    data.map(function(media, index){
+      var medialUrl = encodeURIComponent(media.link);
+
+      //todo: externize the apikey & url to prop file
+      var url = 'http://gateway-a.watsonplatform.net/calls/url/URLGetTargetedSentiment?targets=capitalone&url='
+                + medialUrl + '&outputMode=json&apikey=c04b23aa4889edb454c4b72e6ae2cae79fa25bfe';
+      // console.log(url);
+      sentimentPromise[index] = doHttp(url);
+    });
+
+    Promise.all(sentimentPromise).then(function(results) {
+      results.map(function(result) {
+        result = JSON.parse(result);
+        switch(result["status"]) {
+          case 'OK':          
+        // console.log('result docSentiment type='+ result.docSentiment.type);
+            switch(result.docSentiment.type) {
+              case 'positive':
+                count.positive++; 
+                break;
+              case 'negative':
+                count.negative++; 
+                break;
+              case 'neutral':
+              default:
+                count.neutral++; 
+            }
+          case 'ERROR':
+          default:
+            // console.log(result.statusInfo);
+            count.neutral++;
+            // console.log('netural='+count.neutral);
+        }
+      });
+
+      deferred.resolve(count);
+    })
+    .catch(function(e) {
+      console.log(e);
+      deferred.reject(e);
+    });
+    // .finally(function(e) {
+    //   console.log(count.positive);
+    // }
+    // );
+
+      return deferred.promise;
   }
 
   /* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
-  function getAction(req, action) {
+  function buildActionStr(req, action) {
     var params = config.actions[action]['params'];
     var paramStr = '';
     for(var i = 0; i<params.length; i++) {
@@ -79,71 +187,10 @@ module.exports = function (app, port) {
     return action + ACTION__SEPARATOR + paramStr;
   }
 
-  function getCodeUrl(req, res, action) {
-    // console.log(action);
-    if(res) {
-      action=null;
-    }
-    var url = authorize_url + '?client_id=' + client_id 
-                      + '&redirect_uri=' + getRedirectUri(req, action) 
-                        + '&response_type=' + response_type;
-    if(res) {
-      res.send({'url': url});
-    }
-    else {
-      return url;
-    }
-  }
-
-  function getCode(req, res, action) {
-    // console.log(url);
-    if(req.query.code) {
-      getToken(req, res);
-    }
-    else {
-      // can only be called from postman or browser, not from ajax call (e.g. angular) 
-      //  otherwise, will get “No 'Access-Control-Allow-Origin' header is present" error
-      res.redirect(getCodeUrl(req, null, action));
-    }
-  }
-
-  function getToken(req, res) {
-
-    //todo:  handle errors (see  https://instagram.com/developer/authentication/)
-console.log('1');
-    var action = req.query.action;
-    var redirect_uri = getRedirectUri(req, action);
-
-    var formData = {
-        'client_id'     : client_id,
-        'client_secret' : client_secret,
-        'grant_type'    : grant_type,
-        'redirect_uri'  : redirect_uri,
-        'code'          : req.query.code
-    };
-console.log('3');
-    doHttp(access_token_url, 'POST', formData).then(function(){
-      console.log(token);
-      if (action === undefined) {
-        if(res)
-          res.send(token);
-      }
-      else { 
-        doAction(res, action);
-      }
-    });
-    // finally () ??
-  }
-
-  function getRedirectUri(req, action) {
-    console.log('2');
-    return 'http://'+ req.hostname + ':'
-                    + port 
-                    + config.redirect_uri 
-                    + ((typeof action === 'string') ? '?action=' + action : '');
-  }
-
+/* sample action:  'recentByTag::tag==CapitalOne||count==3||' */
   function getActionUrl(action) {
+
+      // console.log("getting url, action="+action);
      var actions = action.split(ACTION__SEPARATOR);
      var url = config.actions[actions[0]]['url'];
      var params = actions[1].split(PARAM_SEPARATOR);
@@ -160,12 +207,68 @@ console.log('3');
         }
      }
      url = url.replace('{ACCESS-TOKEN}', token);
+     // console.log("getting url, url="+url + paramStr);
      return url + paramStr;
   }
 
-  /* call url 
-    and 
-  return a promise
+  function getCode(req, res, action) {
+    console.log('getting code...');
+    var url = authorize_url + '?client_id=' + client_id 
+                            + '&redirect_uri=' + getRedirectUri(req, action) 
+                            + '&response_type=' + response_type;
+    // console.log(url);
+    // gettingToken = true;
+    res.redirect(url);
+  }
+
+  function getToken(req, res) {
+   // if(token) return doAction(req, res, action);
+
+    //todo:  handle errors (see  https://instagram.com/developer/authentication/)
+
+    var action = req.query.action;
+    // if(typeof action !== 'string') {
+    //   console.log("Action not a string!")
+    //   return;
+    // }
+
+    if(token) 
+      res.send(token);
+
+    var redirect_uri = getRedirectUri(req, action);
+
+    var formData = {
+        'client_id'     : client_id,
+        'client_secret' : client_secret,
+        'grant_type'    : grant_type,
+        'redirect_uri'  : redirect_uri,
+        'code'          : req.query.code
+    };
+
+    doHttp(access_token_url, 'POST', formData).then(function(){
+      if (action === undefined) {
+      console.log("action undefined.");
+        res.send(token);
+      }
+      else { 
+        console.log("token got successfully");
+        return doAction(req, res, action);
+      }
+    });
+    // finally () ??
+  }
+
+  function getRedirectUri(req, action) {
+    // console.log("action to redirect="+action);
+    return 'http://'+ req.hostname + ':'
+                    + port 
+                    + config.redirect_uri 
+                    + ((typeof action === 'string') ? '?action=' + action : '');
+  }
+
+  /** perform a http request  
+        and 
+      return a promise
   */
 	function doHttp(url, method, formData) {
 	  var deferred = Q.defer();
@@ -176,11 +279,8 @@ console.log('3');
       method: method,
       formData: formData,
 	    url: url 
-      // headers: {
-      //   'Access-Control-Allow-Origin': '*'
-      // }
 	  };
-    console.log('Calling ' + options.url);
+     // console.log('Calling ' + options.url);
 	  request(options, function(err, res, body) {
 	    if (err) {
 	      deferred.reject(err);
@@ -188,13 +288,15 @@ console.log('3');
 	      return;
 	    }
      //   console.log(body);
+     if(token===undefined)
       try {
         token = JSON.parse(body).access_token;
       } catch(e) {
         console.log(e);
-        deferred.reject(err);
+        deferred.reject(e);
         return;
       }
+      
        deferred.resolve(body);
     });
     return deferred.promise;   
