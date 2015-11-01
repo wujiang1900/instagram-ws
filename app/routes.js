@@ -130,6 +130,8 @@ module.exports = function (app, port) {
     var sentimentPromise = [];
     data.map(function(media, index){
       var medialUrl = encodeURIComponent(media.link);
+
+      //todo: externize the apikey & url to prop file
       var url = 'http://gateway-a.watsonplatform.net/calls/url/URLGetTargetedSentiment?targets=capitalone&url='
                 + medialUrl + '&outputMode=json&apikey=c04b23aa4889edb454c4b72e6ae2cae79fa25bfe';
       // console.log(url);
