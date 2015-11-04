@@ -34,7 +34,7 @@ module.exports = function (app, port) {
     //console.log('calling '+path.basename(req.path));
  // console.log('req.params.action='+req.params.action);
     if(/CapitalOne/i.test(req.params.action)) {
-      doCapitalOne(req, res);
+      return doCapitalOne(req, res);
     }
 
     var action = buildActionStr(req, req.params.action);
@@ -42,7 +42,7 @@ module.exports = function (app, port) {
        getCode(req, res, action);
     }
     else {
-     return doAction(req, res, action);
+      return doAction(req, res, action);
     }
   }
 
@@ -50,7 +50,6 @@ module.exports = function (app, port) {
     req.params.action = 'recentByTag';
     req.query.tag='CapitalOne';
     performAction(req, res);
-   // res.send(data);
   }
 
   /** process the action  
@@ -62,20 +61,17 @@ module.exports = function (app, port) {
     doHttp(getActionUrl(action))
     .then(function(result){
       // console.log("got result. action="+action);
-      var data;
+      var data = JSON.parse(result).data;
       if(/recentByTag::tag==CapitalOne/i.test(action)) {
-         data = compileResults(req, res, JSON.parse(result).data);  
-         console.log('data='+data);
+        compileResults(req, res, data);  
        }
-      else    
-         data = JSON.parse(result).data;
         
       deferred.resolve(data);
     })
-    // .catch(function(e) {
-    //   console.log(e);
-    //   deferred.reject(e);
-    // });    
+    .catch(function(e) {
+      console.log(e);
+      deferred.reject(e);
+    });    
     // finally () ??
     return deferred.promise;
   }
@@ -94,17 +90,13 @@ module.exports = function (app, port) {
     var result = [];
     Promise.all(userInfoPromise).then(function(info){    
       data.map(function(m, i){ 
-        // console.log('cons');
         result[i] = constructResult (m, info[i]);
       });
-      // res.send(result);
-      res.send({'mediaAndUserInfo':result, 'sentimentCount':info[data.length+1]});
+      result = {'mediaAndUserInfo':result, 'sentimentCount':info[data.length+1]};
+      res.send(result);
     })
     .catch(function(e) {
       console.log(e);
-    })
-    .finally(function(){
-      return result;
     });
   }
 
@@ -232,8 +224,8 @@ module.exports = function (app, port) {
     //   return;
     // }
 
-    if(token) 
-      res.send(token);
+    // if(token) 
+    //   res.send(token);
 
     var redirect_uri = getRedirectUri(req, action);
 
@@ -248,11 +240,10 @@ module.exports = function (app, port) {
     doHttp(access_token_url, 'POST', formData).then(function(){
       if (action === undefined) {
       console.log("action undefined.");
-        res.send(token);
       }
       else { 
         console.log("token got successfully");
-        return doAction(req, res, action);
+        doAction(req, res, action);
       }
     });
     // finally () ??
@@ -280,18 +271,19 @@ module.exports = function (app, port) {
       formData: formData,
 	    url: url 
 	  };
-     // console.log('Calling ' + options.url);
+     console.log('Calling ' + options.url);
 	  request(options, function(err, res, body) {
 	    if (err) {
 	      deferred.reject(err);
 	      console.log(err);
 	      return;
 	    }
-     //   console.log(body);
+       // console.log(body);
      if(token===undefined)
       try {
         token = JSON.parse(body).access_token;
       } catch(e) {
+        console.log('body='+body);
         console.log(e);
         deferred.reject(e);
         return;
