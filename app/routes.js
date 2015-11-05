@@ -55,6 +55,8 @@ module.exports = function (app, port) {
   /** process the action  
         and 
       return a promise with data
+      or send result in the response
+         (when res != null)
   */
   function doAction(req, res, action) {
     var deferred = Q.defer();
@@ -64,9 +66,12 @@ module.exports = function (app, port) {
       var data = JSON.parse(result).data;
       if(/recentByTag::tag==CapitalOne/i.test(action)) {
         compileResults(req, res, data);  
-       }
-        
-      deferred.resolve(data);
+      }
+      else
+      if(res) 
+        res.send(result);
+      else
+        deferred.resolve(data);
     })
     .catch(function(e) {
       console.log(e);
@@ -119,18 +124,16 @@ module.exports = function (app, port) {
   function runSentimentAnalysis(data) {
     var deferred = Q.defer();
     var count = {positive:0, negative:0, neutral:0};
-    var sentimentPromise = [];
-    data.map(function(media, index){
+
+    Promise.all(data.map(function(media, index){
       var medialUrl = encodeURIComponent(media.link);
 
       //todo: externize the apikey & url to prop file
       var url = 'http://gateway-a.watsonplatform.net/calls/url/URLGetTargetedSentiment?targets=capitalone&url='
                 + medialUrl + '&outputMode=json&apikey=c04b23aa4889edb454c4b72e6ae2cae79fa25bfe';
       // console.log(url);
-      sentimentPromise[index] = doHttp(url);
-    });
-
-    Promise.all(sentimentPromise).then(function(results) {
+      return doHttp(url);
+    })).then(function(results) {
       results.map(function(result) {
         result = JSON.parse(result);
         switch(result["status"]) {
@@ -243,7 +246,7 @@ module.exports = function (app, port) {
       }
       else { 
         console.log("token got successfully");
-        doAction(req, res, action);
+        return doAction(req, res, action);
       }
     });
     // finally () ??
